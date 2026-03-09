@@ -11,8 +11,10 @@ import {
     ActivityIndicator,
     Platform,
     Modal,
-    Alert
+    Alert,
+    Clipboard
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Store, Star, CheckCircle, Ban, ChevronRight, Phone, Clock, X, ShoppingBasket, AlertTriangle, Clock3, ShieldCheck, FileText, MapPin, Activity, Smartphone } from 'lucide-react-native';
 import { adminAPI } from '../../src/services/api';
 import { useToast } from '../../src/context/ToastContext';
@@ -30,21 +32,12 @@ const STATUS_COLORS = {
 
 export default function RestaurantsScreen() {
     const { showToast, showConfirm } = useToast();
+    const router = useRouter();
     const [restaurants, setRestaurants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState('ALL');
     const [actionLoading, setActionLoading] = useState(null); // restaurantId being updated
-
-    // Menu Modal State
-    const [menuModalVisible, setMenuModalVisible] = useState(false);
-    const [selectedRes, setSelectedRes] = useState(null);
-    const [menu, setMenu] = useState([]);
-    const [menuLoading, setMenuLoading] = useState(false);
-
-    // Dossier Modal State
-    const [dossierModalVisible, setDossierModalVisible] = useState(false);
-    const [selectedResForDossier, setSelectedResForDossier] = useState(null);
 
     const fetchRestaurants = async () => {
         try {
@@ -58,23 +51,8 @@ export default function RestaurantsScreen() {
         }
     };
 
-    const handleViewMenu = async (restaurant) => {
-        setSelectedRes(restaurant);
-        setMenuModalVisible(true);
-        setMenuLoading(true);
-        try {
-            const { data } = await adminAPI.getRestaurantMenu(restaurant._id);
-            setMenu(data);
-        } catch (error) {
-            console.error("Failed to fetch menu:", error);
-        } finally {
-            setMenuLoading(false);
-        }
-    };
-
-    const handleViewDossier = (restaurant) => {
-        setSelectedResForDossier(restaurant);
-        setDossierModalVisible(true);
+    const handleViewDetails = (restaurant) => {
+        router.push(`/restaurant/${restaurant._id}`);
     };
 
     const handleStatusChange = async (restaurant, newStatus) => {
@@ -117,6 +95,11 @@ export default function RestaurantsScreen() {
     useEffect(() => {
         fetchRestaurants();
     }, []);
+
+    const copyToClipboard = (id, label) => {
+        Clipboard.setString(id);
+        showToast('success', `${label} ID copied to clipboard!`);
+    };
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -204,6 +187,14 @@ export default function RestaurantsScreen() {
                                         </View>
                                     </View>
 
+                                    {/* ID Section for Banners */}
+                                    <View style={styles.idContainer}>
+                                        <Text style={styles.idText}>ID: {res._id}</Text>
+                                        <TouchableOpacity onPress={() => copyToClipboard(res._id, res.name)}>
+                                            <Text style={styles.copyText}>COPY ID</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
                                     <View style={styles.metaRow}>
                                         <View style={styles.metaItem}>
                                             <Clock size={12} color="#93959F" />
@@ -230,17 +221,10 @@ export default function RestaurantsScreen() {
                                     ) : (
                                         <View style={styles.cardFooter}>
                                             <TouchableOpacity
-                                                style={styles.viewDetailsBtn}
-                                                onPress={() => handleViewMenu(res)}
-                                            >
-                                                <ChevronRight size={14} color="#93959F" />
-                                            </TouchableOpacity>
-
-                                            <TouchableOpacity
                                                 style={styles.viewDossierBtn}
-                                                onPress={() => handleViewDossier(res)}
+                                                onPress={() => handleViewDetails(res)}
                                             >
-                                                <Text style={styles.viewDossierText}>VIEW DOSSIER</Text>
+                                                <Text style={styles.viewDossierText}>VIEW DASHBOARD</Text>
                                                 <ShieldCheck size={14} color="#FC8019" />
                                             </TouchableOpacity>
 
@@ -303,197 +287,6 @@ export default function RestaurantsScreen() {
                 )}
                 <View style={{ height: 100 }} />
             </ScrollView>
-
-            {/* Menu Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={menuModalVisible}
-                onRequestClose={() => setMenuModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <View>
-                                <Text style={styles.modalTitle}>{selectedRes?.name}'s Menu</Text>
-                                <Text style={styles.modalSubtitle}>{menu.length} Items Listed</Text>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => setMenuModalVisible(false)}
-                                style={styles.closeBtn}
-                            >
-                                <X size={24} color="#282C3F" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {menuLoading ? (
-                            <View style={styles.modalLoading}>
-                                <ActivityIndicator size="large" color="#FC8019" />
-                            </View>
-                        ) : (
-                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.menuList}>
-                                {menu.map((item) => (
-                                    <View key={item._id} style={styles.menuItem}>
-                                        <Image source={{ uri: item.image }} style={styles.menuItemImage} />
-                                        <View style={styles.menuItemInfo}>
-                                            <View style={styles.menuItemHeader}>
-                                                <Text style={styles.itemName}>{item.name}</Text>
-                                                <View style={[styles.vegBadge, { borderColor: item.isVeg ? '#22c55e' : '#FF5252' }]}>
-                                                    <View style={[styles.vegCircle, { backgroundColor: item.isVeg ? '#22c55e' : '#FF5252' }]} />
-                                                </View>
-                                            </View>
-                                            <Text style={styles.itemCategory}>{item.category}</Text>
-                                            <Text style={styles.itemPrice}>₹{item.price}</Text>
-                                        </View>
-                                    </View>
-                                ))}
-
-                                {menu.length === 0 && !menuLoading && (
-                                    <View style={styles.emptyMenu}>
-                                        <ShoppingBasket size={48} color="#D4D5D9" />
-                                        <Text style={styles.emptyMenuText}>No items added to menu yet</Text>
-                                    </View>
-                                )}
-                            </ScrollView>
-                        )}
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Dossier Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={dossierModalVisible}
-                onRequestClose={() => setDossierModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <View>
-                                <Text style={styles.modalTitle}>Partner Dossier</Text>
-                                <Text style={styles.modalSubtitle}>ID: {selectedResForDossier?._id?.substring(0, 10)}...</Text>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => setDossierModalVisible(false)}
-                                style={styles.closeBtn}
-                            >
-                                <X size={24} color="#282C3F" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* Business Info */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>BUSINESS INFORMATION</Text>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>RESTURANT NAME</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.name || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>STORE TYPE</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.storeType || 'RESTAURANT'}</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>OWNER NAME</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.ownerName || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>PHONE</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.phone || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.infoBox}>
-                                    <Text style={styles.infoLabel}>ADDRESS</Text>
-                                    <Text style={styles.infoValue}>
-                                        {selectedResForDossier?.address?.street ?
-                                            `${selectedResForDossier.address.street}, ${selectedResForDossier.address.city}, ${selectedResForDossier.address.zip}` :
-                                            'N/A'}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {/* Statutory Details */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>STATUTORY & LEGAL</Text>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>FSSAI LICENSE</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.fssaiLicense || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>GST NUMBER</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.gstNumber || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.infoBox}>
-                                    <Text style={styles.infoLabel}>PAN NUMBER</Text>
-                                    <Text style={styles.infoValue}>{selectedResForDossier?.panNumber || 'N/A'}</Text>
-                                </View>
-                            </View>
-
-                            {/* Bank Details */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>BANKING DETAILS</Text>
-                                <View style={styles.infoBox}>
-                                    <Text style={styles.infoLabel}>ACCOUNT HOLDER</Text>
-                                    <Text style={styles.infoValue}>{selectedResForDossier?.bankDetails?.accountHolderName || 'N/A'}</Text>
-                                </View>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>ACCOUNT NUMBER</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.bankDetails?.accountNumber || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>IFSC CODE</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.bankDetails?.ifscCode || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>BANK NAME</Text>
-                                        <Text style={styles.infoValue}>{selectedResForDossier?.bankDetails?.bankName || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                            </View>
-
-                            {/* Documents */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>DOCUMENT PREVIEWS</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.docScroll}>
-                                    {selectedResForDossier?.documentImages?.fssai && (
-                                        <View style={styles.docPreviewCard}>
-                                            <Image source={{ uri: selectedResForDossier.documentImages.fssai }} style={styles.docFullImage} />
-                                            <Text style={styles.docTag}>FSSAI</Text>
-                                        </View>
-                                    )}
-                                    {selectedResForDossier?.documentImages?.pan && (
-                                        <View style={styles.docPreviewCard}>
-                                            <Image source={{ uri: selectedResForDossier.documentImages.pan }} style={styles.docFullImage} />
-                                            <Text style={styles.docTag}>PAN</Text>
-                                        </View>
-                                    )}
-                                    {selectedResForDossier?.documentImages?.cancelledCheque && (
-                                        <View style={styles.docPreviewCard}>
-                                            <Image source={{ uri: selectedResForDossier.documentImages.cancelledCheque }} style={styles.docFullImage} />
-                                            <Text style={styles.docTag}>CHEQUE</Text>
-                                        </View>
-                                    )}
-                                    {!selectedResForDossier?.documentImages && (
-                                        <View style={styles.noDocBox}>
-                                            <FileText size={32} color="#D4D5D9" />
-                                            <Text style={styles.noDocText}>No documents uploaded</Text>
-                                        </View>
-                                    )}
-                                </ScrollView>
-                            </View>
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
         </View>
     );
 }
@@ -627,6 +420,29 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontWeight: '900',
         letterSpacing: 0.5,
+    },
+    idContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        marginTop: 12,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+    },
+    idText: {
+        fontSize: 10,
+        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+        color: '#64748b',
+    },
+    copyText: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#FC8019',
     },
     metaRow: {
         flexDirection: 'row',

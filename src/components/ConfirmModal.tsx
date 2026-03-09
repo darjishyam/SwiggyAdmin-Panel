@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { AlertTriangle, HelpCircle } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
@@ -15,10 +14,7 @@ const ConfirmModal = ({ visible, title, message, onConfirm, onCancel, type = 'da
             animationType="fade"
             onRequestClose={onCancel}
         >
-            <View style={styles.overlay}>
-                {Platform.OS !== 'web' && (
-                    <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
-                )}
+            <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
                 <View style={styles.modalContainer}>
                     <View style={styles.iconSection}>
                         <View style={[styles.iconCircle, { backgroundColor: type === 'danger' ? '#fef2f2' : '#eff6ff' }]}>

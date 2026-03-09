@@ -46,13 +46,13 @@ const Toast = ({ type = 'success', message, onHide }) => {
     const getStyles = () => {
         switch (type) {
             case 'success':
-                return { bg: '#4caf50', icon: <CheckCircle color="#fff" size={24} /> };
+                return { bg: '#10B981', icon: <CheckCircle color="#fff" size={24} /> };
             case 'error':
-                return { bg: '#ef5350', icon: <XCircle color="#fff" size={24} /> };
+                return { bg: '#F43F5E', icon: <XCircle color="#fff" size={24} /> };
             case 'info':
-                return { bg: '#2196f3', icon: <Info color="#fff" size={24} /> };
+                return { bg: '#3B82F6', icon: <Info color="#fff" size={24} /> };
             default:
-                return { bg: '#333', icon: null };
+                return { bg: '#3B82F6', icon: null };
         }
     };
 

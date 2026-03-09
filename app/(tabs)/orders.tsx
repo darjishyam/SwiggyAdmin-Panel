@@ -8,13 +8,14 @@ import {
     StyleSheet,
     Dimensions,
     ActivityIndicator,
-    Platform
+    Platform,
+    Alert
 } from 'react-native';
-import { ShoppingBag, Clock, MapPin, User, ChevronRight, Hash, CreditCard, Activity, X, Navigation, Phone, ShieldCheck } from 'lucide-react-native';
+import { ShoppingBag, Clock, MapPin, User, ChevronRight, Hash, CreditCard, Activity, X, Navigation, Phone, ShieldCheck, Filter, AlertTriangle, CheckCircle } from 'lucide-react-native';
 import { adminAPI } from '../../src/services/api';
 import { socketService } from '../../src/services/socket';
-import { BlurView } from 'expo-blur';
 import { Modal } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -22,6 +23,11 @@ export default function OrdersScreen() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const params = useLocalSearchParams();
+
+    // Filter State
+    const [activeFilter, setActiveFilter] = useState('ALL');
+    const FILTERS = ['ALL', 'PENDING', 'PROCESSING', 'ON ROUTE', 'COMPLETED', 'CANCELLED'];
 
     // Tracking State
     const [trackingModalVisible, setTrackingModalVisible] = useState(false);
@@ -85,22 +91,92 @@ export default function OrdersScreen() {
         };
     }, []);
 
+    // Set filter from params
+    useEffect(() => {
+        if (params.filter) {
+            const filterMap = {
+                pending: 'PENDING',
+                processing: 'PROCESSING',
+                onRoute: 'ON ROUTE',
+                completed: 'COMPLETED',
+                cancelled: 'CANCELLED'
+            };
+            const mappedFilter = filterMap[params.filter];
+            if (mappedFilter) {
+                setActiveFilter(mappedFilter);
+            }
+        }
+    }, [params.filter]);
+
     const onRefresh = () => {
         setRefreshing(true);
         fetchOrders();
+    };
+
+    const handleUpdateStatus = async (orderId, newStatus) => {
+        Alert.alert(
+            "Update Status",
+            `Are you sure you want to change this order status to ${newStatus.toUpperCase()}? This will notify all parties.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Confirm",
+                    style: newStatus === 'Cancelled' ? 'destructive' : 'default',
+                    onPress: async () => {
+                        try {
+                            const { data } = await adminAPI.updateOrderStatus(orderId, newStatus);
+                            // Update local state
+                            setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
+                            if (selectedOrder?._id === orderId) {
+                                setSelectedOrder(prev => ({ ...prev, status: newStatus }));
+                            }
+                            Alert.alert("Success", `Order status updated to ${newStatus}`);
+                        } catch (error) {
+                            console.error("Status update error:", error);
+                            Alert.alert("Error", error.response?.data?.message || "Failed to update status");
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const getStatusColor = (status) => {
         switch (status) {
             case 'Delivered': return '#22c55e';
             case 'Order Placed': return '#FC8019';
+            case 'Confirmed':
             case 'Preparing': return '#3498db';
+            case 'Ready':
             case 'Out for Delivery': return '#9b59b6';
             case 'Cancelled': return '#FF5252';
-            case 'Ready': return '#e67e22';
             default: return '#93959F';
         }
     };
+
+    const filterOrders = (ordersList) => {
+        if (activeFilter === 'ALL') return ordersList;
+
+        return ordersList.filter(order => {
+            const status = order.status;
+            switch (activeFilter) {
+                case 'PENDING':
+                    return status === 'Order Placed';
+                case 'PROCESSING':
+                    return ['Confirmed', 'Preparing'].includes(status);
+                case 'ON ROUTE':
+                    return ['Ready', 'Out for Delivery'].includes(status);
+                case 'COMPLETED':
+                    return status === 'Delivered';
+                case 'CANCELLED':
+                    return status === 'Cancelled';
+                default:
+                    return true;
+            }
+        });
+    };
+
+    const displayOrders = filterOrders(orders);
 
     return (
         <View style={styles.container}>
@@ -108,13 +184,31 @@ export default function OrdersScreen() {
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FC8019" />}
             >
+                {/* Filter Bar */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterBar}
+                    contentContainerStyle={styles.filterContent}
+                >
+                    {FILTERS.map(f => (
+                        <TouchableOpacity
+                            key={f}
+                            style={[styles.filterTab, activeFilter === f && styles.filterTabActive]}
+                            onPress={() => setActiveFilter(f)}
+                        >
+                            <Text style={[styles.filterTabText, activeFilter === f && styles.filterTabTextActive]}>{f}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
                 {loading && !refreshing ? (
                     <View style={styles.centerBox}>
                         <ActivityIndicator size="large" color="#FC8019" />
                     </View>
                 ) : (
                     <>
-                        {orders.map((order) => (
+                        {displayOrders.map((order) => (
                             <TouchableOpacity
                                 key={order._id}
                                 style={styles.orderCard}
@@ -215,9 +309,6 @@ export default function OrdersScreen() {
                 onRequestClose={() => setTrackingModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    {Platform.OS !== 'web' && (
-                        <BlurView intensity={30} style={StyleSheet.absoluteFill} tint="dark" />
-                    )}
                     <View style={styles.trackingContainer}>
                         {/* Header */}
                         <View style={styles.modalHeader}>
@@ -317,9 +408,6 @@ export default function OrdersScreen() {
                 onRequestClose={() => setDetailsModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    {Platform.OS !== 'web' && (
-                        <BlurView intensity={30} style={StyleSheet.absoluteFill} tint="dark" />
-                    )}
                     <View style={styles.detailsContainer}>
                         {/* Header */}
                         <View style={styles.modalHeader}>
@@ -451,6 +539,40 @@ export default function OrdersScreen() {
                                     </View>
                                 </View>
                             )}
+
+                            {/* Management Section */}
+                            <View style={styles.section}>
+                                <View style={styles.sectionHeader}>
+                                    <ShieldCheck size={16} color="#FC8019" />
+                                    <Text style={styles.sectionTitle}>MANAGE ORDER (ADMIN OVERRIDE)</Text>
+                                </View>
+                                <View style={[styles.detailCard, { backgroundColor: '#FFF5F5', borderColor: '#FFE8E8' }]}>
+                                    <Text style={styles.managementWarning}>Only use these buttons if the order is "stuck" or if manual intervention is required.</Text>
+
+                                    <View style={styles.managementButtons}>
+                                        {selectedOrder?.status !== 'Cancelled' && selectedOrder?.status !== 'Delivered' && (
+                                            <TouchableOpacity
+                                                style={[styles.manageBtn, styles.cancelBtn]}
+                                                onPress={() => handleUpdateStatus(selectedOrder._id, 'Cancelled')}
+                                            >
+                                                <AlertTriangle size={16} color="#fff" />
+                                                <Text style={styles.manageBtnText}>CANCEL ORDER</Text>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {selectedOrder?.status !== 'Delivered' && selectedOrder?.status !== 'Cancelled' && (
+                                            <TouchableOpacity
+                                                style={[styles.manageBtn, styles.completeBtn]}
+                                                onPress={() => handleUpdateStatus(selectedOrder._id, 'Delivered')}
+                                            >
+                                                <CheckCircle size={16} color="#fff" />
+                                                <Text style={styles.manageBtnText}>MARK DELIVERED</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+
                             <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
@@ -467,6 +589,37 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 20,
+        paddingTop: 10,
+    },
+    // Filter Bar Styles
+    filterBar: {
+        marginBottom: 15,
+        height: 45,
+    },
+    filterContent: {
+        alignItems: 'center',
+        paddingRight: 20,
+    },
+    filterTab: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#E9E9EB',
+    },
+    filterTabActive: {
+        backgroundColor: '#FC8019',
+        borderColor: '#FC8019',
+    },
+    filterTabText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#7E808C',
+    },
+    filterTabTextActive: {
+        color: '#fff',
     },
     centerBox: {
         height: 400,
@@ -617,6 +770,48 @@ const styles = StyleSheet.create({
         color: '#FC8019',
         letterSpacing: 1,
         marginRight: 8,
+    },
+    modalTrackBtnText: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#FC8019',
+        letterSpacing: 1,
+    },
+    // Management Section Styles
+    managementWarning: {
+        fontSize: 10,
+        color: '#D32F2F',
+        fontWeight: '700',
+        marginBottom: 16,
+        lineHeight: 14,
+        textAlign: 'center',
+    },
+    managementButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    manageBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        height: 48,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
+    },
+    cancelBtn: {
+        backgroundColor: '#D32F2F',
+    },
+    completeBtn: {
+        backgroundColor: '#2E7D32',
+    },
+    manageBtnText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '900',
+        marginLeft: 8,
+        letterSpacing: 0.5,
     },
     emptyContainer: {
         height: 400,

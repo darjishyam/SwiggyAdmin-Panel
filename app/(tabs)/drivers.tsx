@@ -13,6 +13,7 @@ import {
     Modal
 } from 'react-native';
 import { Truck, Smartphone, MapPin, CheckCircle, Ban, Star, ShieldCheck, Activity, X, Clock3, AlertTriangle, ChevronRight, FileText, Phone } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { adminAPI } from '../../src/services/api';
 import { useToast } from '../../src/context/ToastContext';
 
@@ -31,15 +32,12 @@ const STATUS_COLORS = {
 
 export default function DriversScreen() {
     const { showToast, showConfirm } = useToast();
+    const router = useRouter();
     const [drivers, setDrivers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState('ALL');
     const [actionLoading, setActionLoading] = useState(null);
-
-    // Detail Modal State
-    const [detailModalVisible, setDetailModalVisible] = useState(false);
-    const [selectedDriver, setSelectedDriver] = useState(null);
 
     const fetchDrivers = async () => {
         try {
@@ -53,6 +51,8 @@ export default function DriversScreen() {
         }
     };
 
+    // ... (Preserved fetchDrivers)
+    // (Removing fetchDriverStats)
     const handleStatusChange = async (driver, newStatus) => {
         const actionLabel = {
             ACTIVE: 'activate',
@@ -94,8 +94,14 @@ export default function DriversScreen() {
 
 
     const viewDetails = (driver) => {
-        setSelectedDriver(driver);
-        setDetailModalVisible(true);
+        router.push(`/driver/${driver._id}`);
+    };
+
+    const getStatusStyle = (status) => {
+        const lower = (status || 'unknown').toLowerCase();
+        if (lower === 'delivered' || lower === 'active') return { bg: '#f0fdf4', text: '#16a34a' };
+        if (lower === 'cancelled' || lower === 'blocked') return { bg: '#fef2f2', text: '#dc2626' };
+        return { bg: '#f9fafb', text: '#374151' };
     };
 
     useEffect(() => {
@@ -298,125 +304,6 @@ export default function DriversScreen() {
                 )}
                 <View style={{ height: 100 }} />
             </ScrollView>
-
-            {/* Driver Detail Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={detailModalVisible}
-                onRequestClose={() => setDetailModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <View>
-                                <Text style={styles.modalTitle}>Driver Profile</Text>
-                                <Text style={styles.modalSubtitle}>Dossier ID: {selectedDriver?._id?.substring(0, 10)}...</Text>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => setDetailModalVisible(false)}
-                                style={styles.closeBtn}
-                            >
-                                <X size={24} color="#282C3F" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* Personal Info */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>PERSONAL INFORMATION</Text>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>NAME</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.name || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>CITY</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.city || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>PHONE</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.phone || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>EMAIL</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.email || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                            </View>
-
-                            {/* Vehicle Info */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>VEHICLE DETAILS</Text>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>MODEL</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.vehicleModel || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>PLATE NUMBER</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.vehicleNumber || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.infoBox}>
-                                    <Text style={styles.infoLabel}>VEHICLE TYPE</Text>
-                                    <Text style={styles.infoValue}>{selectedDriver?.vehicleType?.toUpperCase() || 'N/A'}</Text>
-                                </View>
-                            </View>
-
-                            {/* Documents */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>KYC DOCUMENTS</Text>
-                                <View style={styles.docGrid}>
-                                    {selectedDriver?.documents?.drivingLicenseUrl ? (
-                                        <View style={styles.docItem}>
-                                            <Image source={{ uri: selectedDriver.documents.drivingLicenseUrl }} style={styles.docPreview} />
-                                            <Text style={styles.docLabel}>Driving License</Text>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.docEmpty}>
-                                            <FileText size={24} color="#D4D5D9" />
-                                            <Text style={styles.docLabel}>License Missing</Text>
-                                        </View>
-                                    )}
-                                    {selectedDriver?.documents?.aadhaarFront ? (
-                                        <View style={styles.docItem}>
-                                            <Image source={{ uri: selectedDriver.documents.aadhaarFront }} style={styles.docPreview} />
-                                            <Text style={styles.docLabel}>Aadhaar Front</Text>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.docEmpty}>
-                                            <FileText size={24} color="#D4D5D9" />
-                                            <Text style={styles.docLabel}>Aadhaar Missing</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-
-                            {/* Bank Details */}
-                            <View style={styles.modalSection}>
-                                <Text style={styles.sectionHeader}>BANK INFORMATION</Text>
-                                <View style={styles.infoBox}>
-                                    <Text style={styles.infoLabel}>ACCOUNT NUMBER</Text>
-                                    <Text style={styles.infoValue}>{selectedDriver?.bankDetails?.accountNumber || 'N/A'}</Text>
-                                </View>
-                                <View style={styles.infoRow}>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>IFSC CODE</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.bankDetails?.ifscCode || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.infoBox}>
-                                        <Text style={styles.infoLabel}>BANK NAME</Text>
-                                        <Text style={styles.infoValue}>{selectedDriver?.bankDetails?.bankName || 'N/A'}</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
         </View>
     );
 }

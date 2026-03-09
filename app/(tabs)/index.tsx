@@ -10,16 +10,23 @@ import {
     Platform,
     ActivityIndicator
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import {
     Users,
     Truck,
     Store,
-    ShoppingBag,
-    TrendingUp,
-    Activity,
     Bell,
     ChevronRight,
-    ArrowUpRight
+    ArrowUpRight,
+    Layers,
+    Ticket,
+    Package,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    Layout,
+    TrendingUp,
+    ShoppingBag
 } from 'lucide-react-native';
 import { adminAPI } from '../../src/services/api';
 
@@ -48,6 +55,7 @@ const StatCard = ({ title, value, icon: Icon, color, trend, full, loading }) => 
 );
 
 export default function Dashboard() {
+    const router = useRouter();
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -56,6 +64,15 @@ export default function Dashboard() {
         totalRestaurants: '0',
         totalOrders: '0',
         totalRevenue: '0',
+        totalCategories: '0',
+        totalOffers: '0',
+        reports: {
+            pending: 0,
+            processing: 0,
+            onRoute: 0,
+            completed: 0,
+            cancelled: 0
+        }
     });
 
     const fetchStats = async () => {
@@ -97,93 +114,138 @@ export default function Dashboard() {
                 </TouchableOpacity>
             </View>
 
-            {/* Stats Grid */}
+            {/* Quick Overview Tier */}
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Overview</Text>
+            </View>
             <View style={styles.statsGrid}>
                 <StatCard
-                    title="Global Revenue"
+                    title="Total Revenue"
                     value={`₹${stats.totalRevenue}`}
                     icon={TrendingUp}
-                    color="#FC8019"
-                    trend="15"
-                    full
+                    color="#16a34a"
+                    trend="12"
                     loading={loading}
+                    full={width < 600}
                 />
                 <StatCard
                     title="Total Users"
                     value={stats.totalUsers}
                     icon={Users}
-                    color="#3498db"
-                    trend="8"
+                    color="#2563eb"
+                    trend="5"
                     loading={loading}
                 />
                 <StatCard
-                    title="Active Logistics"
-                    value={stats.totalDrivers}
-                    icon={Truck}
-                    color="#27ae60"
-                    loading={loading}
-                />
-                <StatCard
-                    title="Partner Outlets"
-                    value={stats.totalRestaurants}
-                    icon={Store}
-                    color="#9b59b6"
-                    trend="4"
-                    loading={loading}
-                />
-                <StatCard
-                    title="Live Transactions"
+                    title="Live Orders"
                     value={stats.totalOrders}
                     icon={ShoppingBag}
-                    color="#e91e63"
-                    trend="24"
+                    color="#ea580c"
                     loading={loading}
                 />
             </View>
 
-            {/* System Status Card */}
-            <View style={styles.statusCard}>
-                <View style={styles.statusHeader}>
-                    <View>
-                        <Text style={styles.statusTitle}>SYSTEM PULSE</Text>
-                        <Text style={styles.statusSubtitle}>Operational Node Status</Text>
-                    </View>
-                    <View style={styles.badgeOptimal}>
-                        <View style={styles.badgeDot} />
-                        <Text style={styles.badgeText}>OPTIMAL</Text>
-                    </View>
-                </View>
-
-                <View style={styles.nodesList}>
-                    {[
-                        { name: 'Gateway Server', load: '12%', status: 'Healthy' },
-                        { name: 'Payment Shard', load: '24%', status: 'Healthy' },
-                        { name: 'Logistics Engine', load: '89%', status: 'Busy' }
-                    ].map((node, i) => (
-                        <View key={i} style={styles.nodeItem}>
-                            <View style={styles.nodeLeft}>
-                                <View style={styles.nodeIcon}>
-                                    <Activity size={18} color="#93959F" />
-                                </View>
-                                <Text style={styles.nodeName}>{node.name}</Text>
-                            </View>
-                            <View style={styles.nodeRight}>
-                                <Text style={styles.nodeLoad}>{node.load}</Text>
-                                <ChevronRight size={14} color="#D4D5D9" />
-                            </View>
-                        </View>
-                    ))}
-                </View>
-
-                <TouchableOpacity style={styles.diagBtn} activeOpacity={0.7}>
-                    <Text style={styles.diagBtnText}>VIEW FULL DIAGNOSTICS</Text>
-                </TouchableOpacity>
+            {/* Detailed Reports Tier */}
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Management & Status</Text>
             </View>
 
-            <View style={{ height: 100 }} />
+            <View style={styles.reportsGrid}>
+                {/* Entities */}
+                <ReportCard
+                    title="Banners"
+                    value="5"
+                    icon={Layout}
+                    loading={loading}
+                />
+                <ReportCard
+                    title="Categories"
+                    value={stats.totalCategories}
+                    icon={Layers}
+                    loading={loading}
+                />
+                <ReportCard
+                    title="Delivery Partners"
+                    value={stats.totalDrivers}
+                    icon={Truck}
+                    loading={loading}
+                />
+                <ReportCard
+                    title="Restaurants"
+                    value={stats.totalRestaurants}
+                    icon={Store}
+                    loading={loading}
+                />
+                <ReportCard
+                    title="Active Offers"
+                    value={stats.totalOffers}
+                    icon={Ticket}
+                    loading={loading}
+                />
+
+                {/* Status Breakdown */}
+                <ReportCard
+                    title="Pending"
+                    value={stats.reports?.pending}
+                    icon={Package}
+                    loading={loading}
+                    onPress={() => router.push({ pathname: '/(tabs)/orders', params: { filter: 'pending' } })}
+                />
+                <ReportCard
+                    title="Processing"
+                    value={stats.reports?.processing}
+                    icon={Clock}
+                    loading={loading}
+                    onPress={() => router.push({ pathname: '/(tabs)/orders', params: { filter: 'processing' } })}
+                />
+                <ReportCard
+                    title="On Route"
+                    value={stats.reports?.onRoute}
+                    icon={Truck}
+                    loading={loading}
+                    onPress={() => router.push({ pathname: '/(tabs)/orders', params: { filter: 'onRoute' } })}
+                />
+                <ReportCard
+                    title="Completed"
+                    value={stats.reports?.completed}
+                    icon={CheckCircle2}
+                    loading={loading}
+                    onPress={() => router.push({ pathname: '/(tabs)/orders', params: { filter: 'completed' } })}
+                />
+                <ReportCard
+                    title="Cancelled"
+                    value={stats.reports?.cancelled}
+                    icon={XCircle}
+                    loading={loading}
+                    onPress={() => router.push({ pathname: '/(tabs)/orders', params: { filter: 'cancelled' } })}
+                />
+            </View>
+
+            <View style={{ height: 60 }} />
         </ScrollView>
     );
 }
+
+const ReportCard = ({ title, value, icon: Icon, color, full, loading, onPress }) => (
+    <TouchableOpacity
+        style={[styles.reportCard, full && { width: '100%', maxWidth: '100%' }]}
+        onPress={onPress}
+        disabled={!onPress}
+        activeOpacity={0.7}
+    >
+        <View style={styles.reportIconContainer}>
+            <Icon size={18} color="#475569" />
+        </View>
+        <View style={styles.reportContent}>
+            <Text style={styles.reportLabel}>{title}</Text>
+            {loading ? (
+                <ActivityIndicator size="small" color="#475569" style={{ alignSelf: 'flex-start' }} />
+            ) : (
+                <Text style={styles.reportValue}>{value}</Text>
+            )}
+        </View>
+    </TouchableOpacity>
+);
 
 const styles = StyleSheet.create({
     container: {
@@ -402,5 +464,63 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         color: '#7E808C',
         letterSpacing: 1,
+    },
+    // New Report Styles
+    sectionHeader: {
+        marginTop: 10,
+        marginBottom: 15,
+        paddingHorizontal: 4,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#475569',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    reportsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        justifyContent: 'space-between',
+    },
+    reportCard: {
+        backgroundColor: '#fff',
+        width: width > 900 ? (width - 100) / 4 : (width > 600 ? (width - 80) / 2 : (width - 52) / 2),
+        borderRadius: 16,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.02,
+        shadowRadius: 4,
+        elevation: 1,
+        marginBottom: 4,
+    },
+    reportIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    reportContent: {
+        flex: 1,
+    },
+    reportLabel: {
+        fontSize: 12,
+        color: '#718096',
+        marginBottom: 2,
+        fontWeight: '500',
+    },
+    reportValue: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#1a202c',
     }
 });

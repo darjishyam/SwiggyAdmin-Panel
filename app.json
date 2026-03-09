@@ -2,7 +2,7 @@
   "expo": {
     "name": "admin-panel",
     "slug": "admin-panel",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "admin-panel",
@@ -14,7 +14,25 @@
       "backgroundColor": "#0f0f0f"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0f0f0f"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.0.21",
+            "jdkVersion": 17
+          }
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true
@@ -24,10 +42,18 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.proberlin.adminpanel",
+      "edgeToEdgeEnabled": true,
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9a1b4511-3877-4418-b043-6f7355338b8a"
+      }
     }
   }
 }
