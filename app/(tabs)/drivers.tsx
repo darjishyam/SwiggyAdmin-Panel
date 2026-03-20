@@ -66,7 +66,7 @@ export default function DriversScreen() {
         const performStatusUpdate = async () => {
             setActionLoading(driver._id);
             try {
-                console.log(`[Admin] Updating driver ${driver._id} status to ${newStatus}`);
+                
                 await adminAPI.updateDriverStatus(driver._id, newStatus);
                 setDrivers(prev =>
                     prev.map(d => d._id === driver._id ? { ...d, status: newStatus } : d)

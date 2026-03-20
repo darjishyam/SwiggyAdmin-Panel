@@ -24,7 +24,7 @@ export const ToastProvider = ({ children }) => {
     };
 
     const showConfirm = (title, message, onConfirm, type = 'danger') => {
-        console.log(`[ToastContext] showConfirm triggered: ${title}`);
+        
         setConfirm({
             visible: true,
             title,
@@ -35,7 +35,7 @@ export const ToastProvider = ({ children }) => {
     };
 
     const handleActualConfirm = async () => {
-        console.log(`[ToastContext] handleActualConfirm triggered`);
+        
         if (typeof confirm.onConfirm === 'function') {
             try {
                 await confirm.onConfirm();

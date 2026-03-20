@@ -4,15 +4,8 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const getBaseUrl = () => {
-    if (Platform.OS === 'web') {
-        // Explicitly use 127.0.0.1 for web to avoid IPv6 Windows resolution issues
-        return 'http://127.0.0.1:5000';
-    }
-    if (Constants.expoConfig?.hostUri) {
-        return `http://${Constants.expoConfig.hostUri.split(':')[0]}:5000`;
-    }
-    // Fallback to detected host IP for physical devices on same Wi-Fi
-    return 'http://10.31.255.131:5000';
+    // Production Render Backend
+    return 'https://freshdrop-backend.onrender.com';
 };
 
 export const BASE_URL = getBaseUrl();

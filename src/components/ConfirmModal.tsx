@@ -35,7 +35,7 @@ const ConfirmModal = ({ visible, title, message, onConfirm, onCancel, type = 'da
                         <TouchableOpacity
                             style={styles.cancelBtn}
                             onPress={() => {
-                                console.log("[ConfirmModal] Cancel pressed");
+                                
                                 onCancel();
                             }}
                             activeOpacity={0.7}
@@ -45,7 +45,7 @@ const ConfirmModal = ({ visible, title, message, onConfirm, onCancel, type = 'da
                         <TouchableOpacity
                             style={[styles.confirmBtn, { backgroundColor: type === 'danger' ? '#dc2626' : '#2563eb' }]}
                             onPress={() => {
-                                console.log("[ConfirmModal] Confirm pressed");
+                                
                                 onConfirm();
                             }}
                             activeOpacity={0.8}

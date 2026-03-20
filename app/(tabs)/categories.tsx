@@ -14,6 +14,7 @@ import {
     Alert,
     Platform
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {
     Layers,
     Plus,
@@ -49,6 +50,27 @@ export default function CategoriesScreen() {
         type: 'Food',
         description: ''
     });
+    const [selectedImage, setSelectedImage] = useState(null);
+
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            showToast("Permission to access gallery is required", "warning");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            setSelectedImage(result.assets[0]);
+            setFormData({ ...formData, image: result.assets[0].uri });
+        }
+    };
 
     const fetchCategories = async () => {
         try {
@@ -91,26 +113,48 @@ export default function CategoriesScreen() {
             });
         }
         setModalVisible(true);
+        setSelectedImage(null);
     };
 
     const handleSave = async () => {
         if (!formData.name || !formData.image) {
-            showToast("Name and Image URL are required", "warning");
+            showToast("Name and Image are required", "warning");
             return;
         }
 
         setFormLoading(true);
         try {
+            const data = new FormData();
+            data.append('name', formData.name);
+            data.append('type', formData.type);
+            data.append('description', formData.description);
+
+            if (selectedImage) {
+                const filename = selectedImage.uri.split('/').pop();
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : `image`;
+
+                // @ts-ignore
+                data.append('image', {
+                    uri: Platform.OS === 'android' ? selectedImage.uri : selectedImage.uri.replace('file://', ''),
+                    name: filename,
+                    type,
+                });
+            } else {
+                data.append('image', formData.image);
+            }
+
             if (editingCategory) {
-                await categoryAPI.updateCategory(editingCategory._id, formData);
+                await categoryAPI.updateCategory(editingCategory._id, data);
                 showToast("Category updated successfully");
             } else {
-                await categoryAPI.createCategory(formData);
+                await categoryAPI.createCategory(data);
                 showToast("Category created successfully");
             }
             setModalVisible(false);
             fetchCategories();
         } catch (error) {
+            console.error("Save failure:", error);
             showToast(error.response?.data?.message || "Operation failed", "error");
         } finally {
             setFormLoading(false);
@@ -263,14 +307,24 @@ export default function CategoriesScreen() {
                             </View>
 
                             <View style={styles.formGroup}>
-                                <Text style={styles.inputLabel}>IMAGE URL</Text>
+                                <Text style={styles.inputLabel}>CATEGORY IMAGE</Text>
+                                <View style={styles.imageSelectorRow}>
+                                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickImage}>
+                                        <ImageIcon size={20} color="#fff" />
+                                        <Text style={styles.imagePickerText}>{selectedImage ? 'CHANGE IMAGE' : 'PICK FROM GALLERY'}</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.orText}>OR</Text>
+                                </View>
                                 <View style={styles.inputContainer}>
                                     <ImageIcon size={18} color="#93959F" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="URL of the category icon/image"
+                                        placeholder="Paste Image URL here"
                                         value={formData.image}
-                                        onChangeText={(t) => setFormData({ ...formData, image: t })}
+                                        onChangeText={(t) => {
+                                            setFormData({ ...formData, image: t });
+                                            setSelectedImage(null);
+                                        }}
                                     />
                                 </View>
                                 {formData.image ? (
@@ -567,5 +621,30 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         marginLeft: 12,
         letterSpacing: 1,
+    },
+    imageSelectorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 12,
+    },
+    imagePickerBtn: {
+        backgroundColor: '#282C3F',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    imagePickerText: {
+        color: '#fff',
+        fontWeight: '800',
+        fontSize: 11,
+        marginLeft: 8,
+    },
+    orText: {
+        fontSize: 12,
+        fontWeight: '900',
+        color: '#93959F',
     },
 });

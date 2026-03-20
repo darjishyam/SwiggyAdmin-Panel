@@ -10,7 +10,7 @@ const Toast = ({ type = 'success', message, onHide }) => {
     const opacity = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        console.log(`[Toast] Rendering toast: ${message}`);
+        
         Animated.sequence([
             Animated.parallel([
                 Animated.timing(translateY, {
@@ -38,7 +38,7 @@ const Toast = ({ type = 'success', message, onHide }) => {
                 }),
             ]),
         ]).start(() => {
-            console.log(`[Toast] Hiding toast`);
+            
             if (onHide) onHide();
         });
     }, []);

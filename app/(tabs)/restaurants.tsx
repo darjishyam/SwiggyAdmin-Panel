@@ -66,7 +66,7 @@ export default function RestaurantsScreen() {
         const performStatusUpdate = async () => {
             setActionLoading(restaurant._id);
             try {
-                console.log(`[Admin] Updating restaurant ${restaurant._id} status to ${newStatus}`);
+                
                 await adminAPI.updateRestaurantStatus(restaurant._id, newStatus);
                 setRestaurants(prev =>
                     prev.map(r => r._id === restaurant._id ? { ...r, status: newStatus } : r)

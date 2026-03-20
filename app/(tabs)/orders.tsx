@@ -58,14 +58,14 @@ export default function OrdersScreen() {
 
         // Listen for new orders
         socketService.onNewOrder((newOrder) => {
-            console.log("🆕 New Order Received via Socket!");
+            
             setOrders(prev => [newOrder, ...prev]);
             // Optional: Show a toast or notification
         });
 
         // Listen for status updates
         socketService.onOrderUpdate((updatedOrder) => {
-            console.log("🔄 Order Update Received via Socket:", updatedOrder._id);
+            
             setOrders(prev => prev.map(order =>
                 order._id === updatedOrder._id ? { ...order, ...updatedOrder } : order
             ));

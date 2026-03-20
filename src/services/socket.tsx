@@ -15,12 +15,12 @@ class SocketService {
         });
 
         this.socket.on('connect', () => {
-            console.log('✅ Connected to Socket Server');
+            
             this.joinAdminRoom();
         });
 
         this.socket.on('disconnect', () => {
-            console.log('❌ Disconnected from Socket Server');
+            
         });
 
         this.socket.on('connect_error', (error) => {
